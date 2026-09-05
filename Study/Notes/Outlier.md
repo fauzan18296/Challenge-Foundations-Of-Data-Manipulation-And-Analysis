@@ -28,6 +28,8 @@ plt.tight_layout()
 plt.show()
 ```
 
+----
+
 ### 2. Metode IQR (Interquartile Range)
 Metode paling umum dan tahan terhadap distribusi tidak normal:
 
