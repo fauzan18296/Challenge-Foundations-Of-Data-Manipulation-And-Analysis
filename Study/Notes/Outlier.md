@@ -53,7 +53,7 @@ df_detect_outlier[outlier_mask]
 
 ---
 
-#### 2.1 Apa konsep metode IQR pada kode diatas?
+#### 🖼️❔ 2.1 Apa konsep metode IQR pada kode diatas?
 ---
 
 Konsep dasarnya adalah:
@@ -74,7 +74,7 @@ Secara intuitif:
 IQR mencoba mengukur "seberapa lebar kelompok utama" lalu menentukan batas wajar di luar kelompok tersebut.
 
 ---
-#### 2.2 Kenapa Metode IQR dianggap tahan terhadap distribusi tidak normal?
+#### 🗝️❔ 2.2 Kenapa Metode IQR dianggap tahan terhadap distribusi tidak normal?
 ---
 Asumsi yang perlu diuji:
 > "Semua metode statistik membutuhkan distribusi normal."
@@ -123,7 +123,7 @@ Itulah sebabnya IQR disebut **robust (tahan)** terhadap:
 - outlier ekstrem
 
 ---
-#### 2.3  Mengapa ada Q1, Q3, IQR, batas bawah/atas, dan outlier mask?
+#### 🤔❔ 2.3  Mengapa ada Q1, Q3, IQR, batas bawah/atas, dan outlier mask?
 ---
 
 Mari lihat fungsi masing-masing.
@@ -203,7 +203,7 @@ False -> bukan outlier
 ```
 
 ---
-#### 2.4 Bagaimana cara kerja metode IQR ini?
+#### ⚙️❔ 2.4 Bagaimana cara kerja metode IQR ini?
 ---
 
 Misalnya:
@@ -267,3 +267,67 @@ Karena:
 ```python
 100 > 46
 ```
+
+---
+
+### 3. Metode Z-Score
+
+Cocok kalau distribusi mendekati normal: z = (x - mean) / std. Umumnya |z| > 3 dianggap outlier. Kelemahan: mean dan std sendiri terpengaruh outlier — untuk data sangat kotor, pakai IQR atau modified z-score (berbasis median).
+
+**Code:**
+```python
+z = (df_detect_outlier["Distance"] - df_detect_outlier["Distance"].mean()) / df_detect_outlier["Distance"].std()
+print(f"Outlier via z-score (|z| > 3): {(z.abs() > 3).sum()}")
+df_detect_outlier[z.abs() > 3]
+```
+
+**Output:**
+```
+Outlier via z-score (|z| > 3): 113
+
+```
+
+---
+
+### 4. Penanganan: 4 Opsi
+
+| Opsi | Kapan |
+|------|-------|
+| **Hapus** | Yakin itu error (Distance 500, Price negatif) |
+| **Capping / Winsorize** | Nilai sah tapi ekstrem; batasi ke persentil (mis. p1-p99) |
+| **Transformasi** (log, sqrt) | Distribusi skewed berat; kompres ekornya |
+| **Biarkan** | Model tahan outlier (tree-based), atau outlier justru target analisis (fraud!) |
+
+**Code:**
+```python
+# Capping ke persentil 1-99
+p1, p99 = df["Price"].quantile([0.01, 0.99])
+df["Price_capped"] = df["Price"].clip(lower=p1, upper=p99)
+
+# Transformasi log (log1p aman untuk nilai 0)
+df["Price_log"] = np.log1p(df["Price"])
+
+print(df[["Price", "Price_capped", "Price_log"]].describe().round(2).T)
+```
+
+**Output:**
+```python
+count        mean        std        min        25%        50%  \
+Price         13580.0  1075684.08  639310.72   85000.00  650000.00  903000.00   
+Price_capped  13580.0  1067605.69  594811.20  300000.00  650000.00  903000.00   
+Price_log     13580.0       13.75       0.53      11.35      13.38      13.71   
+
+                    75%         max  
+Price         1330000.0  9000000.00  
+Price_capped  1330000.0  3338150.00  
+Price_log          14.1       16.01
+```
+
+---
+
+## 📍 Prinsip Penting
+
+1. Selalu **investigasi dulu**: outlier error atau sah?
+2. Dokumentasikan setiap keputusan buang/ubah data.
+3. Di konteks ML: deteksi batas outlier dari **train set saja**, terapkan ke test set.
+4. Di beberapa kasus (fraud detection, anomaly detection) outlier justru sinyal, bukan noise.
